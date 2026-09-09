@@ -1,9 +1,4 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,39 +6,74 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_application_1/main.dart';
 
 void main() {
-  testWidgets('shows the Blokus board and places a piece', (tester) async {
+  testWidgets('opens PvP from the main menu', (tester) async {
     await tester.pumpWidget(const BlokusApp());
 
-    expect(find.text('BLOKUS'), findsOneWidget);
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('ピースを選んで盤面に置こう'), findsOneWidget);
+    expect(find.text('対戦する'), findsOneWidget);
+    expect(find.text('ルールを見る'), findsOneWidget);
 
-    final board = find.byType(GridView);
-    final firstCell = find
-        .descendant(of: board, matching: find.byType(GestureDetector))
-        .first;
-    await tester.ensureVisible(firstCell);
-    await tester.tap(firstCell);
-    await tester.pump();
+    await tester.tap(find.text('対戦する'));
+    await tester.pumpAndSettle();
+    expect(find.text('対戦モードを選択'), findsOneWidget);
 
-    expect(find.text('10'), findsOneWidget);
-    expect(find.text('ナイス！ 次のピースを選ぼう'), findsOneWidget);
+    await tester.tap(find.text('PvP'));
+    await tester.pumpAndSettle();
+    expect(find.text('対戦中'), findsOneWidget);
+    expect(find.byType(GridView), findsOneWidget);
   });
 
-  testWidgets('can rotate and reset the selected piece', (tester) async {
+  test('enforces first placement and awards edge points', () {
+    final match = MatchState(false, Random(1));
+    final firstPiece = match.players[0].hand.first;
+    final shape = firstPiece.shape;
+    final startRow = 10 - shape.map((cell) => cell[0]).reduce(max);
+    final result = match.tryPlace(0, 0, startRow, 5);
+
+    expect(result.success, isTrue);
+    expect(match.players[0].hand.first.used, isTrue);
+    expect(match.turn, 1);
+    expect(match.players[0].score, 0);
+
+    final secondPieceIndex = match.players[1].hand.indexWhere(
+      (piece) => !piece.used,
+    );
+    expect(secondPieceIndex, greaterThanOrEqualTo(0));
+    final secondPiece = match.players[1].hand[secondPieceIndex];
+    final secondShape = secondPiece.shape;
+    final secondRow = secondShape.map((cell) => cell[0]).reduce(max);
+    PlacementResult secondResult = const PlacementResult(false, '');
+    for (var rotation = 0; rotation < 4 && !secondResult.success; rotation++) {
+      secondResult = match.tryPlace(secondPieceIndex, rotation, 0, 5);
+    }
+    expect(secondResult.success, isTrue);
+    expect(match.players[1].hand[secondPieceIndex].used, isTrue);
+    expect(secondRow, lessThan(11));
+  });
+
+  test('previews a placement before the second tap commits it', () {
+    final match = MatchState(false, Random(3));
+    final piece = match.players[0].hand.first;
+    final row = 10 - piece.shape.map((cell) => cell[0]).reduce(max);
+
+    final preview = match.previewPlacement(0, 0, row, 5);
+    expect(preview.success, isTrue);
+    expect(preview.positions, isNotEmpty);
+    expect(match.board.every((cell) => cell == null), isTrue);
+    expect(piece.used, isFalse);
+    expect(match.players[0].score, 0);
+
+    final placed = match.tryPlace(0, 0, row, 5);
+    expect(placed.success, isTrue);
+    expect(match.board.any((cell) => cell == 0), isTrue);
+    expect(piece.used, isTrue);
+  });
+
+  testWidgets('shows the written rules', (tester) async {
     await tester.pumpWidget(const BlokusApp());
+    await tester.tap(find.text('ルールを見る'));
+    await tester.pumpAndSettle();
 
-    final rotateButton = find.byIcon(Icons.rotate_right_rounded);
-    await tester.ensureVisible(rotateButton);
-    await tester.tap(rotateButton);
-    await tester.pump();
-    expect(find.text('回転しました。置きたい場所をタップ'), findsOneWidget);
-
-    final resetButton = find.byIcon(Icons.refresh_rounded);
-    await tester.ensureVisible(resetButton);
-    await tester.tap(resetButton);
-    await tester.pump();
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('ピースを選んで盤面に置こう'), findsOneWidget);
+    expect(find.text('ブロックスのルール'), findsOneWidget);
+    expect(find.textContaining('交互にブロックを置きます'), findsOneWidget);
   });
 }
