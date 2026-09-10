@@ -179,8 +179,9 @@ class MainMenuPage extends StatelessWidget {
         content: const SingleChildScrollView(
           child: Text(
             '2人で交互にブロックを置きます。\n\n'
-            '• 先攻は11行6列、後攻は1行6列に最初のブロックを置きます。\n'
-            '• 2回目以降は、自分のブロックの辺に接する場所だけ置けます。\n'
+            '• ゲーム開始時、先攻は11行6列、後攻は1行6列に1マスが配置されています。\n'
+            '• 手札のブロックを選び、盤面をタップして影を確認してから、もう一度タップで置きます。\n'
+            '• 自分のブロックの辺に接する場所だけ置けます。\n'
             '• ブロックは重ねられません。置けないときはスキップします。\n'
             '• 向きを変えて置くとエネルギーを1消費します。\n'
             '• 自分のブロックと接した辺1つにつき100ポイントです。\n'
@@ -236,6 +237,10 @@ class _MatchPageState extends State<MatchPage> {
 
   void _rotate() {
     if (_busy) return;
+    if (_currentPlayer.energy == 0) {
+      setState(() => _match.message = 'エネルギーが0なので回転できません');
+      return;
+    }
     setState(() {
       _rotation = (_rotation + 1) % 4;
       _clearPreview();
@@ -267,7 +272,8 @@ class _MatchPageState extends State<MatchPage> {
     );
     if (!preview.success) {
       setState(() {
-        _clearPreview();
+        _previewRow = row;
+        _previewCol = col;
         _match.message = preview.message;
       });
       return;
@@ -292,10 +298,29 @@ class _MatchPageState extends State<MatchPage> {
       _previewRow!,
       _previewCol!,
     );
-    return preview.success &&
-        preview.positions.any(
-          (position) => position[0] == row && position[1] == col,
-        );
+    return preview.positions.any(
+      (position) => position[0] == row && position[1] == col,
+    );
+  }
+
+  bool _isOverlappingPreviewCell(int row, int col) {
+    if (_previewRow == null || _previewCol == null) return false;
+    final preview = _match.previewPlacement(
+      _selectedPiece,
+      _rotation,
+      _previewRow!,
+      _previewCol!,
+    );
+    return preview.conflictingPositions.any(
+      (position) => position[0] == row && position[1] == col,
+    );
+  }
+
+  bool _isOutOfBoundsPreview() {
+    if (_previewRow == null || _previewCol == null) return false;
+    return _match
+        .previewPlacement(_selectedPiece, _rotation, _previewRow!, _previewCol!)
+        .outOfBounds;
   }
 
   void _skip() {
@@ -478,13 +503,18 @@ class _MatchPageState extends State<MatchPage> {
                 size: 17,
                 color: Color(0xff506079),
               )
-            : Center(child: _preview(piece)),
+            : Center(
+                child: _preview(piece, rotation: selected ? _rotation : 0),
+              ),
       ),
     );
   }
 
-  Widget _preview(HandPiece piece) {
-    final shape = piece.shape;
+  Widget _preview(HandPiece piece, {int rotation = 0}) {
+    final shape = rotate(
+      piece.baseShape,
+      (piece.initialRotation + rotation) % 4,
+    );
     final maxRow = shape.map((c) => c[0]).reduce(max);
     final maxCol = shape.map((c) => c[1]).reduce(max);
     return SizedBox(
@@ -554,12 +584,24 @@ class _MatchPageState extends State<MatchPage> {
               duration: const Duration(milliseconds: 130),
               decoration: BoxDecoration(
                 color: _isPreviewCell(index ~/ 11, index % 11)
-                    ? _currentPlayer.color.withAlpha(125)
+                    ? (_isOutOfBoundsPreview()
+                          ? const Color(0xff9b6cff)
+                          : (_isOverlappingPreviewCell(index ~/ 11, index % 11)
+                                ? const Color(0xffff8a3d)
+                                : _currentPlayer.color.withAlpha(125)))
                     : (cell == null ? _navy : _match.players[cell].color),
                 borderRadius: BorderRadius.circular(3),
               ),
               child: _isPreviewCell(index ~/ 11, index % 11)
-                  ? const Icon(Icons.circle, size: 5, color: Color(0x80ffffff))
+                  ? Icon(
+                      Icons.circle,
+                      size: 5,
+                      color: _isOutOfBoundsPreview()
+                          ? const Color(0xffeadfff)
+                          : _isOverlappingPreviewCell(index ~/ 11, index % 11)
+                          ? const Color(0xffffeadb)
+                          : const Color(0x80ffffff),
+                    )
                   : (cell == null
                         ? null
                         : const Icon(
@@ -600,7 +642,7 @@ class _MatchPageState extends State<MatchPage> {
       title: const Text('ルール'),
       content: const SingleChildScrollView(
         child: Text(
-          '交互にブロックを置きます。先攻は11行6列、後攻は1行6列に最初のブロックが触れるように置きます。2回目以降は自分のブロックの辺に接する場所だけ置けます。\n\n向きを変えて置くとエネルギーを1消費し、接した辺1つにつき100ポイントです。置けないときはスキップし、両者が置けなくなるか手札がなくなると終了します。',
+          '交互にブロックを置きます。ゲーム開始時、先攻は11行6列、後攻は1行6列に1マスが配置されています。手札のブロックを選び、盤面をタップして影を確認してから、もう一度タップで置きます。自分のブロックの辺に接する場所だけ置けます。\n\n向きを変えて置くとエネルギーを1消費し、接した辺1つにつき100ポイントです。置けないときはスキップし、両者が置けなくなるか手札がなくなると終了します。',
           style: TextStyle(height: 1.6),
         ),
       ),
@@ -620,6 +662,8 @@ class MatchState {
       Player(0, 'PLAYER 1', _blue, _createHand(random)),
       Player(1, isCpu ? 'CPU' : 'PLAYER 2', _red, _createHand(random)),
     ];
+    board[10 * 11 + 5] = 0;
+    board[5] = 1;
   }
 
   final bool isCpu;
@@ -669,31 +713,43 @@ class MatchState {
       return const PlacementResult(false, 'そのブロックはもう使っています');
     }
     final piece = player.hand[handIndex];
-    if (player.energy == 0)
-      return const PlacementResult(false, 'エネルギーが0なので置けません');
     final cells = rotate(
       piece.baseShape,
       (piece.initialRotation + rotation) % 4,
     );
     final positions = cells.map((c) => [row + c[0], col + c[1]]).toList();
-    if (positions.any(
-      (p) =>
-          p[0] < 0 ||
-          p[0] >= 11 ||
-          p[1] < 0 ||
-          p[1] >= 11 ||
-          board[p[0] * 11 + p[1]] != null,
-    )) {
-      return const PlacementResult(false, 'そこには置けません');
-    }
-    final firstMove = player.hand.every((p) => !p.used);
-    final touchesStart = positions.any(
-      (p) => p[1] == 5 && (player.id == 0 ? p[0] == 10 : p[0] == 0),
+    final outOfBounds = positions.any(
+      (p) => p[0] < 0 || p[0] >= 11 || p[1] < 0 || p[1] >= 11,
     );
-    if (firstMove && !touchesStart)
-      return PlacementResult(false, '${player.name}の最初のブロックは6列目に置いてください');
-    if (!firstMove && !_touchesOwnEdge(player.id, positions))
-      return const PlacementResult(false, '自分のブロックの辺に接する場所を選んでください');
+    final conflictingPositions = positions.where((p) {
+      return outOfBounds || board[p[0] * 11 + p[1]] != null;
+    }).toList();
+    if (conflictingPositions.isNotEmpty) {
+      return PlacementResult(
+        false,
+        '赤い影は重なっているか、フィールドの外です',
+        positions: positions,
+        conflictingPositions: conflictingPositions,
+        outOfBounds: outOfBounds,
+      );
+    }
+    if (player.energy == 0) {
+      if (rotation != 0) {
+        return PlacementResult(
+          false,
+          'エネルギーが0なので回転できません',
+          positions: positions,
+          outOfBounds: outOfBounds,
+        );
+      }
+    }
+    if (!_touchesOwnEdge(player.id, positions))
+      return PlacementResult(
+        false,
+        '自分のブロックの辺に接する場所を選んでください',
+        positions: positions,
+        outOfBounds: outOfBounds,
+      );
     return PlacementResult(true, '', positions: positions);
   }
 
@@ -720,12 +776,21 @@ class MatchState {
   }
 
   void _advance() {
-    if (players.every((p) => p.hand.every((piece) => piece.used)) ||
-        skippedTurns >= 2) {
+    if (players.every((p) => p.hand.every((piece) => piece.used))) {
       finished = true;
       return;
     }
     turn = 1 - turn;
+    while (players[turn].hand.every((piece) => piece.used)) {
+      skippedTurns++;
+      message = '${players[turn].name}は手札を置ききったため自動スキップ';
+      if (skippedTurns >= 2) {
+        finished = true;
+        return;
+      }
+      turn = 1 - turn;
+    }
+    if (skippedTurns >= 2) finished = true;
   }
 
   bool _touchesOwnEdge(int playerId, List<List<int>> positions) =>
@@ -795,11 +860,15 @@ class PlacementResult {
     this.success,
     this.message, {
     this.positions = const [],
+    this.conflictingPositions = const [],
+    this.outOfBounds = false,
   });
 
   final bool success;
   final String message;
   final List<List<int>> positions;
+  final List<List<int>> conflictingPositions;
+  final bool outOfBounds;
 }
 
 List<List<int>> rotate(List<List<int>> source, int turns) {
@@ -815,70 +884,6 @@ List<List<int>> rotate(List<List<int>> source, int turns) {
 List<HandPiece> _createHand(Random random) {
   const diceNets = [
     [
-      [0, 1],
-      [1, 1],
-      [2, 1],
-      [3, 1],
-      [3, 0],
-      [3, 2],
-    ],
-    [
-      [0, 1],
-      [1, 1],
-      [2, 1],
-      [3, 1],
-      [2, 0],
-      [2, 2],
-    ],
-    [
-      [0, 0],
-      [0, 1],
-      [1, 1],
-      [2, 1],
-      [3, 1],
-      [3, 2],
-    ],
-    [
-      [0, 0],
-      [0, 1],
-      [1, 1],
-      [2, 1],
-      [2, 2],
-      [3, 2],
-    ],
-    [
-      [0, 1],
-      [1, 1],
-      [2, 1],
-      [3, 1],
-      [1, 0],
-      [3, 2],
-    ],
-    [
-      [0, 0],
-      [1, 0],
-      [1, 1],
-      [1, 2],
-      [2, 2],
-      [3, 2],
-    ],
-    [
-      [0, 0],
-      [1, 0],
-      [2, 0],
-      [2, 1],
-      [2, 2],
-      [3, 2],
-    ],
-    [
-      [0, 2],
-      [1, 0],
-      [1, 1],
-      [1, 2],
-      [2, 0],
-      [2, 1],
-    ],
-    [
       [0, 0],
       [0, 1],
       [0, 2],
@@ -889,18 +894,82 @@ List<HandPiece> _createHand(Random random) {
     [
       [0, 0],
       [0, 1],
+      [0, 2],
+      [1, 2],
+      [1, 3],
+      [1, 4],
+    ],
+    [
+      [0, 0],
+      [0, 1],
+      [1, 1],
+      [1, 2],
+      [1, 3],
+      [2, 1],
+    ],
+    [
+      [0, 0],
+      [0, 1],
+      [1, 1],
+      [1, 2],
+      [1, 3],
+      [2, 2],
+    ],
+    [
+      [0, 0],
+      [0, 1],
+      [1, 1],
+      [1, 2],
+      [1, 3],
+      [2, 3],
+    ],
+    [
+      [0, 0],
+      [0, 1],
+      [1, 1],
+      [1, 2],
+      [2, 1],
+      [3, 1],
+    ],
+    [
+      [0, 0],
+      [0, 1],
       [1, 1],
       [1, 2],
       [2, 2],
+      [2, 3],
+    ],
+    [
+      [0, 0],
+      [0, 1],
+      [1, 1],
+      [2, 1],
+      [2, 2],
+      [3, 1],
+    ],
+    [
+      [0, 0],
+      [0, 1],
+      [1, 1],
+      [2, 1],
+      [3, 1],
       [3, 2],
     ],
     [
       [0, 1],
+      [1, 0],
       [1, 1],
-      [2, 0],
+      [1, 2],
+      [1, 3],
       [2, 1],
+    ],
+    [
+      [0, 1],
+      [1, 0],
+      [1, 1],
+      [1, 2],
+      [1, 3],
       [2, 2],
-      [3, 1],
     ],
   ];
   const colors = [
