@@ -24,48 +24,93 @@ void main() {
 
   test('enforces first placement and awards edge points', () {
     final match = MatchState(false, Random(1));
+    expect(match.board[10 * 11 + 5], 0);
+    expect(match.board[5], 1);
     final firstPiece = match.players[0].hand.first;
     final shape = firstPiece.shape;
-    final startRow = 10 - shape.map((cell) => cell[0]).reduce(max);
-    final result = match.tryPlace(0, 0, startRow, 5);
+    final startRow =
+        10 - shape.map((cell) => cell[0]).reduce((a, b) => a > b ? a : b);
+    final result = match.tryPlace(0, 0, startRow, 4);
 
     expect(result.success, isTrue);
     expect(match.players[0].hand.first.used, isTrue);
     expect(match.turn, 1);
-    expect(match.players[0].score, 0);
+    expect(match.players[0].score, greaterThan(0));
 
     final secondPieceIndex = match.players[1].hand.indexWhere(
       (piece) => !piece.used,
     );
     expect(secondPieceIndex, greaterThanOrEqualTo(0));
     final secondPiece = match.players[1].hand[secondPieceIndex];
-    final secondShape = secondPiece.shape;
-    final secondRow = secondShape.map((cell) => cell[0]).reduce(max);
     PlacementResult secondResult = const PlacementResult(false, '');
     for (var rotation = 0; rotation < 4 && !secondResult.success; rotation++) {
-      secondResult = match.tryPlace(secondPieceIndex, rotation, 0, 5);
+      for (var row = 0; row < 11 && !secondResult.success; row++) {
+        for (var col = 0; col < 11 && !secondResult.success; col++) {
+          secondResult = match.tryPlace(secondPieceIndex, rotation, row, col);
+        }
+      }
     }
     expect(secondResult.success, isTrue);
     expect(match.players[1].hand[secondPieceIndex].used, isTrue);
-    expect(secondRow, lessThan(11));
   });
 
   test('previews a placement before the second tap commits it', () {
     final match = MatchState(false, Random(3));
     final piece = match.players[0].hand.first;
-    final row = 10 - piece.shape.map((cell) => cell[0]).reduce(max);
+    PlacementResult? legalPreview;
+    var legalRow = 0;
+    var legalCol = 0;
+    for (var row = 0; row < 11 && legalPreview == null; row++) {
+      for (var col = 0; col < 11 && legalPreview == null; col++) {
+        final candidate = match.previewPlacement(0, 0, row, col);
+        if (candidate.success) {
+          legalPreview = candidate;
+          legalRow = row;
+          legalCol = col;
+        }
+      }
+    }
+    expect(legalPreview, isNotNull);
 
-    final preview = match.previewPlacement(0, 0, row, 5);
-    expect(preview.success, isTrue);
-    expect(preview.positions, isNotEmpty);
-    expect(match.board.every((cell) => cell == null), isTrue);
+    expect(legalPreview!.positions, isNotEmpty);
+    expect(match.board.where((cell) => cell != null).length, 2);
     expect(piece.used, isFalse);
     expect(match.players[0].score, 0);
 
-    final placed = match.tryPlace(0, 0, row, 5);
+    final overlap = match.previewPlacement(0, 0, 10, 5);
+    expect(overlap.success, isFalse);
+    expect(overlap.positions, isNotEmpty);
+    expect(overlap.conflictingPositions, isNotEmpty);
+    expect(piece.used, isFalse);
+
+    final placed = match.tryPlace(0, 0, legalRow, legalCol);
     expect(placed.success, isTrue);
     expect(match.board.any((cell) => cell == 0), isTrue);
     expect(piece.used, isTrue);
+  });
+
+  test('allows the current orientation at zero energy', () {
+    final match = MatchState(false, Random(8));
+    final piece = match.players[0].hand.first;
+    match.players[0].energy = 0;
+    final legal = _findPlacement(match, 0, 0);
+
+    expect(legal, isNotNull);
+    final placed = match.tryPlace(0, 0, legal!.$1, legal.$2);
+    expect(placed.success, isTrue);
+    expect(piece.used, isTrue);
+  });
+
+  test('automatically skips a player with no remaining hand', () {
+    final match = MatchState(false, Random(9));
+    for (final piece in match.players[0].hand) {
+      piece.used = true;
+    }
+    match.turn = 0;
+    match.skipTurn();
+
+    expect(match.turn, 1);
+    expect(match.finished, isFalse);
   });
 
   testWidgets('shows the written rules', (tester) async {
@@ -76,4 +121,15 @@ void main() {
     expect(find.text('ブロックスのルール'), findsOneWidget);
     expect(find.textContaining('交互にブロックを置きます'), findsOneWidget);
   });
+}
+
+(int, int)? _findPlacement(MatchState match, int handIndex, int rotation) {
+  for (var row = 0; row < 11; row++) {
+    for (var col = 0; col < 11; col++) {
+      if (match.previewPlacement(handIndex, rotation, row, col).success) {
+        return (row, col);
+      }
+    }
+  }
+  return null;
 }
