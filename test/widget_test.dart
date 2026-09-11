@@ -24,6 +24,7 @@ void main() {
 
   test('enforces first placement and awards edge points', () {
     final match = MatchState(false, Random(1));
+    match.turn = 0;
     expect(match.board[10 * 11 + 5], 0);
     expect(match.board[5], 1);
     final firstPiece = match.players[0].hand.first;
@@ -52,10 +53,12 @@ void main() {
     }
     expect(secondResult.success, isTrue);
     expect(match.players[1].hand[secondPieceIndex].used, isTrue);
+    expect(secondResult.scoringEdges, isNotEmpty);
   });
 
   test('previews a placement before the second tap commits it', () {
     final match = MatchState(false, Random(3));
+    match.turn = 0;
     final piece = match.players[0].hand.first;
     PlacementResult? legalPreview;
     var legalRow = 0;
@@ -91,6 +94,7 @@ void main() {
 
   test('allows the current orientation at zero energy', () {
     final match = MatchState(false, Random(8));
+    match.turn = 0;
     final piece = match.players[0].hand.first;
     match.players[0].energy = 0;
     final legal = _findPlacement(match, 0, 0);
@@ -113,13 +117,25 @@ void main() {
     expect(match.finished, isFalse);
   });
 
+  test('CPU placement returns its scoring edges for the effect', () {
+    final match = MatchState(true, Random(12));
+    match.turn = 1;
+
+    final result = match.cpuMove();
+
+    expect(result, isNotNull);
+    expect(result!.success, isTrue);
+    expect(match.board.where((cell) => cell == 1), isNotEmpty);
+  });
+
   testWidgets('shows the written rules', (tester) async {
     await tester.pumpWidget(const BlokusApp());
     await tester.tap(find.text('ルールを見る'));
     await tester.pumpAndSettle();
 
-    expect(find.text('ブロックスのルール'), findsOneWidget);
-    expect(find.textContaining('交互にブロックを置きます'), findsOneWidget);
+    expect(find.text('📖 ゲームの遊び方'), findsOneWidget);
+    expect(find.text('1. ターンの流れ'), findsOneWidget);
+    expect(find.textContaining('盤面にブロックをつなげて'), findsOneWidget);
   });
 }
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -10,6 +11,170 @@ const _grid = Color(0xff25334a);
 const _gold = Color(0xfff5a524);
 const _blue = Color(0xff56b4d3);
 const _red = Color(0xffef6f61);
+
+Widget _rulesContent() {
+  const headingStyle = TextStyle(
+    color: _gold,
+    fontSize: 15,
+    fontWeight: FontWeight.w800,
+  );
+  const bodyStyle = TextStyle(
+    color: Color(0xffc8d1df),
+    fontSize: 13,
+    height: 1.45,
+  );
+  return SingleChildScrollView(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('盤面にブロックをつなげて、高得点を目指す対戦ゲーム！', style: bodyStyle),
+        const SizedBox(height: 16),
+        const Text('1. ターンの流れ', style: headingStyle),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+          decoration: BoxDecoration(
+            color: _panel,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _RuleStep(icon: Icons.touch_app_rounded, label: 'ブロックを選ぶ'),
+              Icon(
+                Icons.arrow_forward_rounded,
+                color: Color(0xff71819a),
+                size: 17,
+              ),
+              _RuleStep(icon: Icons.visibility_rounded, label: '影を確認'),
+              Icon(
+                Icons.arrow_forward_rounded,
+                color: Color(0xff71819a),
+                size: 17,
+              ),
+              _RuleStep(icon: Icons.check_circle_rounded, label: 'もう一度タップ'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text('💡 ブロックを回転すると、R-Energy⚡を1消費', style: bodyStyle),
+        const SizedBox(height: 16),
+        const Text('2. 配置のルール', style: headingStyle),
+        const SizedBox(height: 6),
+        const Text(
+          '・自分のブロックと接すること\n・重ね置き不可）\n※置く場所がない場合はスキップ',
+          style: bodyStyle,
+        ),
+        const SizedBox(height: 16),
+        const Text('3. 得点と勝敗', style: headingStyle),
+        const SizedBox(height: 6),
+        const Text(
+          '得点：自分のブロック同士をぴったりくっつけると＋100pt！\n（接している「辺」の数 × 100pt）\n\n終了：手持ちのブロックがなくなる、または2人とも置けなくなったらゲーム終了\n勝利：最終ポイントが高いプレイヤーの勝ち！',
+          style: bodyStyle,
+        ),
+      ],
+    ),
+  );
+}
+
+class _RuleStep extends StatelessWidget {
+  const _RuleStep({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Icon(icon, color: _gold, size: 22),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Color(0xffd4ddeb), fontSize: 10),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FieldLogo extends StatelessWidget {
+  const _FieldLogo({this.size = 82});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    const cells = [
+      null,
+      _red,
+      _red,
+      null,
+      null,
+      _blue,
+      _red,
+      _red,
+      _red,
+      _red,
+      _blue,
+      _blue,
+      null,
+      null,
+      _red,
+      null,
+      _blue,
+      _blue,
+      _blue,
+      null,
+      null,
+      _blue,
+      _blue,
+      null,
+      null,
+    ];
+    return Container(
+      width: size,
+      height: size,
+      padding: EdgeInsets.all(size * 0.12),
+      decoration: BoxDecoration(
+        color: _grid,
+        borderRadius: BorderRadius.circular(size * 0.28),
+        border: Border.all(color: _gold.withAlpha(180), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: _gold.withAlpha(35),
+            blurRadius: 18,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: GridView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 5,
+          crossAxisSpacing: 2,
+          mainAxisSpacing: 2,
+        ),
+        itemCount: cells.length,
+        itemBuilder: (context, index) {
+          final color = cells[index];
+          return DecoratedBox(
+            decoration: BoxDecoration(
+              color: color ?? _navy,
+              borderRadius: BorderRadius.circular(2),
+              border: color == null
+                  ? Border.all(color: const Color(0xff33445f), width: 0.5)
+                  : null,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
 
 class BlokusApp extends StatelessWidget {
   const BlokusApp({super.key});
@@ -47,19 +212,7 @@ class MainMenuPage extends StatelessWidget {
               constraints: const BoxConstraints(maxWidth: 430),
               child: Column(
                 children: [
-                  Container(
-                    width: 82,
-                    height: 82,
-                    decoration: BoxDecoration(
-                      color: _gold,
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    child: const Icon(
-                      Icons.grid_4x4_rounded,
-                      color: _navy,
-                      size: 48,
-                    ),
-                  ),
+                  const _FieldLogo(),
                   const SizedBox(height: 22),
                   const Text(
                     'CUBIC BLOCKS',
@@ -70,10 +223,12 @@ class MainMenuPage extends StatelessWidget {
                     ),
                   ),
                   const Text(
-                    'ひらめきで、つなぐ。',
+                    'ポイントを稼ぐか。メンタルを削るか。',
                     style: TextStyle(
                       color: Color(0xff9aa8bd),
-                      letterSpacing: 2,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
                     ),
                   ),
                   const SizedBox(height: 58),
@@ -175,20 +330,8 @@ class MainMenuPage extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('ブロックスのルール'),
-        content: const SingleChildScrollView(
-          child: Text(
-            '2人で交互にブロックを置きます。\n\n'
-            '• ゲーム開始時、先攻は11行6列、後攻は1行6列に1マスが配置されています。\n'
-            '• 手札のブロックを選び、盤面をタップして影を確認してから、もう一度タップで置きます。\n'
-            '• 自分のブロックの辺に接する場所だけ置けます。\n'
-            '• ブロックは重ねられません。置けないときはスキップします。\n'
-            '• 向きを変えて置くとエネルギーを1消費します。\n'
-            '• 自分のブロックと接した辺1つにつき100ポイントです。\n'
-            '• 手札がなくなるか、両者が置けなくなると終了します。',
-            style: TextStyle(height: 1.65, color: Color(0xffc8d1df)),
-          ),
-        ),
+        title: const Text('📖 ゲームの遊び方'),
+        content: _rulesContent(),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -209,18 +352,40 @@ class MatchPage extends StatefulWidget {
   State<MatchPage> createState() => _MatchPageState();
 }
 
-class _MatchPageState extends State<MatchPage> {
+class _MatchPageState extends State<MatchPage>
+    with SingleTickerProviderStateMixin {
   late MatchState _match;
   int _selectedPiece = 0;
   int _rotation = 0;
   int? _previewRow;
   int? _previewCol;
+  List<ScoringEdge> _effectEdges = const [];
+  int _visibleEffectCells = 0;
+  Timer? _effectTimer;
+  late final AnimationController _energyBlinkController;
   bool _busy = false;
 
   @override
   void initState() {
     super.initState();
+    _energyBlinkController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 450),
+      lowerBound: 0.25,
+      upperBound: 1,
+      value: 1,
+    );
     _match = MatchState(widget.isCpu, Random());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _nextTurn();
+    });
+  }
+
+  @override
+  void dispose() {
+    _effectTimer?.cancel();
+    _energyBlinkController.dispose();
+    super.dispose();
   }
 
   Player get _currentPlayer => _match.players[_match.turn];
@@ -233,6 +398,9 @@ class _MatchPageState extends State<MatchPage> {
       _clearPreview();
       _match.message = '置きたいマスをタップ';
     });
+    _energyBlinkController
+      ..stop()
+      ..value = 1;
   }
 
   void _rotate() {
@@ -241,6 +409,7 @@ class _MatchPageState extends State<MatchPage> {
       setState(() => _match.message = 'エネルギーが0なので回転できません');
       return;
     }
+    _energyBlinkController.repeat(reverse: true);
     setState(() {
       _rotation = (_rotation + 1) % 4;
       _clearPreview();
@@ -250,8 +419,14 @@ class _MatchPageState extends State<MatchPage> {
 
   void _place(int row, int col) {
     if (_busy || _match.finished) return;
+    final origin = _placementOrigin(row, col);
     if (_previewRow == row && _previewCol == col) {
-      final result = _match.tryPlace(_selectedPiece, _rotation, row, col);
+      final result = _match.tryPlace(
+        _selectedPiece,
+        _rotation,
+        origin[0],
+        origin[1],
+      );
       if (!result.success) {
         setState(() => _match.message = result.message);
         return;
@@ -261,14 +436,18 @@ class _MatchPageState extends State<MatchPage> {
         _rotation = 0;
         _selectedPiece = 0;
       });
+      _energyBlinkController
+        ..stop()
+        ..value = 1;
+      _startPointEffect(result);
       _nextTurn();
       return;
     }
     final preview = _match.previewPlacement(
       _selectedPiece,
       _rotation,
-      row,
-      col,
+      origin[0],
+      origin[1],
     );
     if (!preview.success) {
       setState(() {
@@ -285,6 +464,45 @@ class _MatchPageState extends State<MatchPage> {
     });
   }
 
+  List<int> _placementOrigin(int row, int col) {
+    final piece = _currentPlayer.hand[_selectedPiece];
+    final cells = rotate(
+      piece.baseShape,
+      (piece.initialRotation + _rotation) % 4,
+    );
+    final minRow = cells.map((cell) => cell[0]).reduce(min);
+    final maxRow = cells.map((cell) => cell[0]).reduce(max);
+    final minCol = cells.map((cell) => cell[1]).reduce(min);
+    final maxCol = cells.map((cell) => cell[1]).reduce(max);
+    return [row - ((minRow + maxRow) ~/ 2), col - ((minCol + maxCol) ~/ 2)];
+  }
+
+  void _startPointEffect(PlacementResult result) {
+    _effectTimer?.cancel();
+    if (result.scoringEdges.isEmpty) return;
+    final previousCount = _effectEdges.length;
+    final totalCount = previousCount + result.scoringEdges.length;
+    setState(() {
+      _effectEdges = [..._effectEdges, ...result.scoringEdges];
+      _visibleEffectCells = previousCount;
+    });
+    var index = previousCount;
+    _effectTimer = Timer.periodic(const Duration(milliseconds: 300), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (index >= totalCount) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        _visibleEffectCells = index + 1;
+      });
+      index++;
+    });
+  }
+
   void _clearPreview() {
     _previewRow = null;
     _previewCol = null;
@@ -292,11 +510,12 @@ class _MatchPageState extends State<MatchPage> {
 
   bool _isPreviewCell(int row, int col) {
     if (_previewRow == null || _previewCol == null) return false;
+    final origin = _placementOrigin(_previewRow!, _previewCol!);
     final preview = _match.previewPlacement(
       _selectedPiece,
       _rotation,
-      _previewRow!,
-      _previewCol!,
+      origin[0],
+      origin[1],
     );
     return preview.positions.any(
       (position) => position[0] == row && position[1] == col,
@@ -305,11 +524,12 @@ class _MatchPageState extends State<MatchPage> {
 
   bool _isOverlappingPreviewCell(int row, int col) {
     if (_previewRow == null || _previewCol == null) return false;
+    final origin = _placementOrigin(_previewRow!, _previewCol!);
     final preview = _match.previewPlacement(
       _selectedPiece,
       _rotation,
-      _previewRow!,
-      _previewCol!,
+      origin[0],
+      origin[1],
     );
     return preview.conflictingPositions.any(
       (position) => position[0] == row && position[1] == col,
@@ -318,8 +538,9 @@ class _MatchPageState extends State<MatchPage> {
 
   bool _isOutOfBoundsPreview() {
     if (_previewRow == null || _previewCol == null) return false;
+    final origin = _placementOrigin(_previewRow!, _previewCol!);
     return _match
-        .previewPlacement(_selectedPiece, _rotation, _previewRow!, _previewCol!)
+        .previewPlacement(_selectedPiece, _rotation, origin[0], origin[1])
         .outOfBounds;
   }
 
@@ -341,7 +562,8 @@ class _MatchPageState extends State<MatchPage> {
       setState(() => _busy = true);
       Future<void>.delayed(const Duration(milliseconds: 450), () {
         if (!mounted) return;
-        _match.cpuMove();
+        final result = _match.cpuMove();
+        if (result != null) _startPointEffect(result);
         setState(() => _busy = false);
         if (_match.finished) {
           _showResult();
@@ -456,11 +678,7 @@ class _MatchPageState extends State<MatchPage> {
                 ),
               ),
               const SizedBox(width: 12),
-              const Icon(Icons.bolt_rounded, color: _gold, size: 17),
-              Text(
-                '${player.energy}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
+              _energyIcons(player),
             ],
           ),
           const SizedBox(height: 7),
@@ -473,6 +691,31 @@ class _MatchPageState extends State<MatchPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _energyIcons(Player player) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(2, (index) {
+        final available = index < player.energy;
+        final blinking =
+            player.id == _match.turn &&
+            _rotation != 0 &&
+            index == player.energy - 1;
+        final icon = Padding(
+          padding: const EdgeInsets.only(left: 2),
+          child: Icon(
+            Icons.bolt_rounded,
+            color: _gold,
+            size: 18,
+            fill: !available ? 0.2 : 1,
+          ),
+        );
+        return blinking
+            ? FadeTransition(opacity: _energyBlinkController, child: icon)
+            : Opacity(opacity: available ? 1 : 0.2, child: icon);
+      }),
     );
   }
 
@@ -552,13 +795,29 @@ class _MatchPageState extends State<MatchPage> {
       Expanded(
         child: Text(
           _busy
-              ? 'CPUが考えています…'
-              : '${_currentPlayer.name}のターン  ・  ${_match.message}',
+              ? 'CPUが考えています...'
+              : '${_currentPlayer.name}のターン - ${_match.message}',
           style: const TextStyle(color: Color(0xffc7d0df), fontSize: 12),
         ),
       ),
     ],
   );
+
+  Border? _effectBorder(int row, int col) {
+    final edges = _effectEdges
+        .take(_visibleEffectCells)
+        .where((edge) => edge.row == row && edge.col == col)
+        .toList();
+    if (edges.isEmpty) return null;
+    final sides = edges.map((edge) => edge.side).toSet();
+    final glow = BorderSide(color: _gold, width: 2);
+    return Border(
+      top: sides.contains(EdgeSide.top) ? glow : BorderSide.none,
+      right: sides.contains(EdgeSide.right) ? glow : BorderSide.none,
+      bottom: sides.contains(EdgeSide.bottom) ? glow : BorderSide.none,
+      left: sides.contains(EdgeSide.left) ? glow : BorderSide.none,
+    );
+  }
 
   Widget _buildBoard() => AspectRatio(
     aspectRatio: 1,
@@ -578,37 +837,47 @@ class _MatchPageState extends State<MatchPage> {
         itemCount: 121,
         itemBuilder: (context, index) {
           final cell = _match.board[index];
+          final row = index ~/ 11;
+          final col = index % 11;
+          final effectBorder = _effectBorder(row, col);
           return GestureDetector(
-            onTap: () => _place(index ~/ 11, index % 11),
+            onTap: () => _place(row, col),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 130),
               decoration: BoxDecoration(
-                color: _isPreviewCell(index ~/ 11, index % 11)
-                    ? (_isOutOfBoundsPreview()
-                          ? const Color(0xff9b6cff)
-                          : (_isOverlappingPreviewCell(index ~/ 11, index % 11)
-                                ? const Color(0xffff8a3d)
-                                : _currentPlayer.color.withAlpha(125)))
+                color: _isPreviewCell(row, col)
+                    ? (_isOutOfBoundsPreview() ||
+                              _isOverlappingPreviewCell(row, col)
+                          ? const Color(0xffff8a3d)
+                          : _currentPlayer.color.withAlpha(125))
                     : (cell == null ? _navy : _match.players[cell].color),
+                border: effectBorder,
                 borderRadius: BorderRadius.circular(3),
               ),
-              child: _isPreviewCell(index ~/ 11, index % 11)
-                  ? Icon(
-                      Icons.circle,
-                      size: 5,
-                      color: _isOutOfBoundsPreview()
-                          ? const Color(0xffeadfff)
-                          : _isOverlappingPreviewCell(index ~/ 11, index % 11)
-                          ? const Color(0xffffeadb)
-                          : const Color(0x80ffffff),
-                    )
-                  : (cell == null
-                        ? null
-                        : const Icon(
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Center(
+                    child: _isPreviewCell(row, col)
+                        ? Icon(
                             Icons.circle,
                             size: 5,
-                            color: Color(0x40000000),
-                          )),
+                            color:
+                                _isOutOfBoundsPreview() ||
+                                    _isOverlappingPreviewCell(row, col)
+                                ? const Color(0xffffeadb)
+                                : const Color(0x80ffffff),
+                          )
+                        : (cell == null
+                              ? null
+                              : const Icon(
+                                  Icons.circle,
+                                  size: 5,
+                                  color: Color(0x40000000),
+                                )),
+                  ),
+                ],
+              ),
             ),
           );
         },
@@ -639,13 +908,8 @@ class _MatchPageState extends State<MatchPage> {
   void _showRules(BuildContext context) => showDialog<void>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('ルール'),
-      content: const SingleChildScrollView(
-        child: Text(
-          '交互にブロックを置きます。ゲーム開始時、先攻は11行6列、後攻は1行6列に1マスが配置されています。手札のブロックを選び、盤面をタップして影を確認してから、もう一度タップで置きます。自分のブロックの辺に接する場所だけ置けます。\n\n向きを変えて置くとエネルギーを1消費し、接した辺1つにつき100ポイントです。置けないときはスキップし、両者が置けなくなるか手札がなくなると終了します。',
-          style: TextStyle(height: 1.6),
-        ),
-      ),
+      title: const Text('📖 ゲームの遊び方'),
+      content: _rulesContent(),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
@@ -664,6 +928,7 @@ class MatchState {
     ];
     board[10 * 11 + 5] = 0;
     board[5] = 1;
+    turn = random.nextInt(2);
   }
 
   final bool isCpu;
@@ -689,7 +954,8 @@ class MatchState {
     final piece = player.hand[handIndex];
     final positions = preview.positions;
     final rotated = rotation != 0;
-    final touchingEdges = _touchingEdges(player.id, positions);
+    final scoringEdges = _touchingEdges(player.id, positions);
+    final touchingEdges = scoringEdges.length;
     for (final p in positions) board[p[0] * 11 + p[1]] = player.id;
     piece.used = true;
     player.score += touchingEdges * 100;
@@ -697,7 +963,12 @@ class MatchState {
     message = '${piece.baseShape.length}マス配置  +${touchingEdges * 100} pt';
     skippedTurns = 0;
     _advance();
-    return const PlacementResult(true, '');
+    return PlacementResult(
+      true,
+      '',
+      scoringEdges: scoringEdges,
+      points: touchingEdges * 100,
+    );
   }
 
   PlacementResult previewPlacement(
@@ -727,7 +998,7 @@ class MatchState {
     if (conflictingPositions.isNotEmpty) {
       return PlacementResult(
         false,
-        '赤い影は重なっているか、フィールドの外です',
+        '配置できません',
         positions: positions,
         conflictingPositions: conflictingPositions,
         outOfBounds: outOfBounds,
@@ -759,7 +1030,7 @@ class MatchState {
     _advance();
   }
 
-  void cpuMove() {
+  PlacementResult? cpuMove() {
     final player = players[1];
     for (var handIndex = 0; handIndex < player.hand.length; handIndex++) {
       if (player.hand[handIndex].used) continue;
@@ -767,12 +1038,13 @@ class MatchState {
         for (var row = 0; row < 11; row++) {
           for (var col = 0; col < 11; col++) {
             final result = tryPlace(handIndex, rotation, row, col);
-            if (result.success) return;
+            if (result.success) return result;
           }
         }
       }
     }
     skipTurn();
+    return null;
   }
 
   void _advance() {
@@ -812,16 +1084,16 @@ class MatchState {
         });
       });
 
-  int _touchingEdges(int playerId, List<List<int>> positions) =>
-      positions.fold(0, (total, p) {
+  List<ScoringEdge> _touchingEdges(int playerId, List<List<int>> positions) =>
+      positions.expand((p) {
         const directions = [
           [-1, 0],
           [1, 0],
           [0, -1],
           [0, 1],
         ];
-        return total +
-            directions.where((d) {
+        return directions
+            .where((d) {
               final row = p[0] + d[0];
               final col = p[1] + d[1];
               return row >= 0 &&
@@ -829,8 +1101,16 @@ class MatchState {
                   col >= 0 &&
                   col < 11 &&
                   board[row * 11 + col] == playerId;
-            }).length;
-      });
+            })
+            .map((d) => ScoringEdge(p[0], p[1], _edgeSide(d[0], d[1])));
+      }).toList();
+
+  EdgeSide _edgeSide(int rowDelta, int colDelta) {
+    if (rowDelta < 0) return EdgeSide.top;
+    if (rowDelta > 0) return EdgeSide.bottom;
+    if (colDelta < 0) return EdgeSide.left;
+    return EdgeSide.right;
+  }
 }
 
 class Player {
@@ -855,6 +1135,16 @@ class HandPiece {
   List<List<int>> get shape => rotate(baseShape, initialRotation);
 }
 
+enum EdgeSide { top, right, bottom, left }
+
+class ScoringEdge {
+  const ScoringEdge(this.row, this.col, this.side);
+
+  final int row;
+  final int col;
+  final EdgeSide side;
+}
+
 class PlacementResult {
   const PlacementResult(
     this.success,
@@ -862,6 +1152,8 @@ class PlacementResult {
     this.positions = const [],
     this.conflictingPositions = const [],
     this.outOfBounds = false,
+    this.scoringEdges = const [],
+    this.points = 0,
   });
 
   final bool success;
@@ -869,6 +1161,8 @@ class PlacementResult {
   final List<List<int>> positions;
   final List<List<int>> conflictingPositions;
   final bool outOfBounds;
+  final List<ScoringEdge> scoringEdges;
+  final int points;
 }
 
 List<List<int>> rotate(List<List<int>> source, int turns) {
