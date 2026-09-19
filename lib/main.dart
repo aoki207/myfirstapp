@@ -12,6 +12,8 @@ const _gold = Color(0xfff5a524);
 const _blue = Color(0xff56b4d3);
 const _red = Color(0xffef6f61);
 
+final playerProfile = PlayerStyleProfile();
+
 Widget _rulesContent() {
   const headingStyle = TextStyle(
     color: _gold,
@@ -246,6 +248,14 @@ class MainMenuPage extends StatelessWidget {
                     () => _showRules(context),
                     outlined: true,
                   ),
+                  const SizedBox(height: 14),
+                  _menuButton(
+                    context,
+                    'マイページ',
+                    Icons.radar_rounded,
+                    () => _showProfile(context),
+                    outlined: true,
+                  ),
                   const SizedBox(height: 42),
                   const Text(
                     '2 PLAYERS  •  11 × 11 FIELD',
@@ -300,6 +310,13 @@ class MainMenuPage extends StatelessWidget {
     );
   }
 
+  void _showProfile(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ProfilePage()),
+    );
+  }
+
   void _showModeDialog(BuildContext context) {
     showDialog<bool>(
       context: context,
@@ -341,6 +358,417 @@ class MainMenuPage extends StatelessWidget {
       ),
     );
   }
+}
+
+class ProfilePage extends StatelessWidget {
+  const ProfilePage({super.key});
+
+  static const axisNames = ['得点志向', '回転活用度', '妨害志向', '終盤決定力', 'ブロック完遂度'];
+
+  @override
+  Widget build(BuildContext context) {
+    final ratings = playerProfile.ratings;
+    return Scaffold(
+      appBar: AppBar(title: const Text('マイページ')),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+          child: Column(
+            children: [
+              Text(
+                'PLAYER 1のプレイスタイル',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                '5軸評価',
+                style: const TextStyle(color: Color(0xffaebbd0)),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 310,
+                child: CustomPaint(
+                  painter: _RadarPainter(ratings),
+                  child: const SizedBox.expand(),
+                ),
+              ),
+              const SizedBox(height: 14),
+              _profileStats(),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const HistoryPage()),
+                  ),
+                  icon: const Icon(Icons.history_rounded),
+                  label: const Text('プレイ履歴を見る'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _profileStats() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _panel,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xff2e3d56)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _statRow('試合数', '${playerProfile.gamesPlayed}試合'),
+          const SizedBox(height: 9),
+          _statRow(
+            '勝敗',
+            '${playerProfile.wins}勝 ${playerProfile.losses}敗 ${playerProfile.draws}分',
+          ),
+          const SizedBox(height: 9),
+          _statRow('平均ポイント', '${playerProfile.averageScore} pt'),
+        ],
+      ),
+    );
+  }
+
+  Widget _statRow(String label, String value) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(label, style: const TextStyle(color: Color(0xffaebbd0))),
+        ),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+}
+
+class HistoryPage extends StatelessWidget {
+  const HistoryPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final matches = playerProfile.matches;
+    return Scaffold(
+      appBar: AppBar(title: const Text('プレイ履歴')),
+      body: matches.isEmpty
+          ? const Center(child: Text('まだプレイ履歴がありません'))
+          : ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: matches.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final match = matches[index];
+                return ListTile(
+                  tileColor: _panel,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  title: Text(
+                    '${match.playerOneName}  vs  ${match.playerTwoName}',
+                  ),
+                  subtitle: Text(
+                    'プレイ開始: ${match.formattedStartedAt}\n'
+                    '勝者: ${match.winnerName}  ・  先攻: ${match.firstPlayerName}  ・  後攻: ${match.secondPlayerName}\n'
+                    '${match.playerOneScore} pt  -  ${match.playerTwoScore} pt  ・  '
+                    'プレイ時間: ${match.formattedDuration}',
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => MatchLogPage(match: match),
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
+
+class MatchLogPage extends StatefulWidget {
+  const MatchLogPage({super.key, required this.match});
+
+  final MatchRecord match;
+
+  @override
+  State<MatchLogPage> createState() => _MatchLogPageState();
+}
+
+class _MatchLogPageState extends State<MatchLogPage> {
+  int? _selectedLog;
+
+  @override
+  Widget build(BuildContext context) {
+    final board = _selectedLog == null
+        ? widget.match.initialBoard
+        : widget.match.logs[_selectedLog!].board;
+    final playerOneScore = _selectedLog == null
+        ? 0
+        : widget.match.logs[_selectedLog!].playerOneTotalPoints;
+    final playerTwoScore = _selectedLog == null
+        ? 0
+        : widget.match.logs[_selectedLog!].playerTwoTotalPoints;
+    return Scaffold(
+      appBar: AppBar(title: const Text('試合ログ')),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Flexible(
+              flex: 3,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: Center(
+                  child: _HistoryBoard(
+                    board: board,
+                    playerOneName: widget.match.playerOneName,
+                    playerTwoName: widget.match.playerTwoName,
+                    playerOneScore: playerOneScore,
+                    playerTwoScore: playerTwoScore,
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+                itemCount: widget.match.logs.length,
+                itemBuilder: (context, index) {
+                  final log = widget.match.logs[index];
+                  final selected = index == _selectedLog;
+                  final playerColor = log.playerId == 0 ? _blue : _red;
+                  return Card(
+                    color: selected
+                        ? playerColor.withAlpha(75)
+                        : playerColor.withAlpha(28),
+                    shape: RoundedRectangleBorder(
+                      side: BorderSide(color: playerColor.withAlpha(170)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: ListTile(
+                      selected: selected,
+                      title: Text(
+                        '${log.turnNumber}ターン目  ${log.playerName}',
+                        style: TextStyle(
+                          color: playerColor,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      subtitle: Text(
+                        '総得点: ${log.totalPoints} pt  ・  得点: +${log.points} pt  ・  逆転: ${log.comeback ? 'あり' : 'なし'}\n'
+                        '妨害度: ${log.obstruction}  ・  回転: ${log.rotated ? 'あり' : 'なし'}',
+                      ),
+                      onTap: () => setState(() => _selectedLog = index),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HistoryBoard extends StatelessWidget {
+  const _HistoryBoard({
+    required this.board,
+    required this.playerOneName,
+    required this.playerTwoName,
+    required this.playerOneScore,
+    required this.playerTwoScore,
+  });
+
+  final List<int?> board;
+  final String playerOneName;
+  final String playerTwoName;
+  final int playerOneScore;
+  final int playerTwoScore;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final boardSize = min(
+          constraints.maxWidth,
+          max(0.0, constraints.maxHeight - 32.0),
+        );
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '$playerOneName  $playerOneScore pt',
+                    style: const TextStyle(
+                      color: _blue,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    '$playerTwoName  $playerTwoScore pt',
+                    textAlign: TextAlign.end,
+                    style: const TextStyle(
+                      color: _red,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            SizedBox.square(
+              dimension: boardSize,
+              child: Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: _grid,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: GridView.builder(
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 11,
+                    crossAxisSpacing: 2,
+                    mainAxisSpacing: 2,
+                  ),
+                  itemCount: board.length,
+                  itemBuilder: (context, index) {
+                    final player = board[index];
+                    return DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: player == null
+                            ? _navy
+                            : player == 0
+                            ? _blue
+                            : _red,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _RadarPainter extends CustomPainter {
+  _RadarPainter(this.ratings);
+
+  final List<int> ratings;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = min(size.width, size.height) * 0.34;
+    final gridPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..color = const Color(0xff34445f);
+    final fillPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..color = _gold.withAlpha(85);
+    final linePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..color = _gold;
+
+    for (var level = 1; level <= 5; level++) {
+      canvas.drawPath(_polygon(center, radius * level / 5), gridPaint);
+    }
+    for (var index = 0; index < 5; index++) {
+      final point = _point(center, radius, index, 5);
+      canvas.drawLine(center, point, gridPaint);
+    }
+    final values = _polygon(
+      center,
+      radius,
+      ratings.map((rating) => rating / 5).toList(),
+    );
+    canvas.drawPath(values, fillPaint);
+    canvas.drawPath(values, linePaint);
+    for (var index = 0; index < ProfilePage.axisNames.length; index++) {
+      final labelPoint = _point(center, radius + 25, index, 5);
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: '${ProfilePage.axisNames[index]}\n${ratings[index]} / 5',
+          style: const TextStyle(
+            color: Color(0xffd4ddeb),
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            height: 1.25,
+          ),
+        ),
+        textAlign: TextAlign.center,
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: 110);
+      textPainter.paint(
+        canvas,
+        Offset(
+          labelPoint.dx - textPainter.width / 2,
+          labelPoint.dy - textPainter.height / 2,
+        ),
+      );
+    }
+  }
+
+  Path _polygon(Offset center, double radius, [List<double>? scales]) {
+    final path = Path();
+    for (var index = 0; index < 5; index++) {
+      final point = _point(
+        center,
+        radius,
+        index,
+        5,
+        scales == null ? 1 : scales[index],
+      );
+      if (index == 0) {
+        path.moveTo(point.dx, point.dy);
+      } else {
+        path.lineTo(point.dx, point.dy);
+      }
+    }
+    path.close();
+    return path;
+  }
+
+  Offset _point(
+    Offset center,
+    double radius,
+    int index,
+    int count, [
+    double scale = 1,
+  ]) {
+    final angle = -pi / 2 + 2 * pi * index / count;
+    return Offset(
+      center.dx + cos(angle) * radius * scale,
+      center.dy + sin(angle) * radius * scale,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _RadarPainter oldDelegate) =>
+      oldDelegate.ratings != ratings;
 }
 
 class MatchPage extends StatefulWidget {
@@ -574,6 +1002,7 @@ class _MatchPageState extends State<MatchPage>
 
   void _showResult() {
     if (!mounted) return;
+    playerProfile.record(_match.players[0], _match.players[1], _match);
     Future<void>.delayed(Duration.zero, () {
       if (!mounted) return;
       showDialog<void>(
@@ -928,14 +1357,21 @@ class MatchState {
     ];
     board[10 * 11 + 5] = 0;
     board[5] = 1;
-    turn = random.nextInt(2);
+    firstPlayerId = random.nextInt(2);
+    turn = firstPlayerId;
+    initialBoard = List<int?>.from(board);
   }
 
   final bool isCpu;
   final Random random;
+  final DateTime startedAt = DateTime.now();
   final List<int?> board = List<int?>.filled(121, null);
+  late final List<int?> initialBoard;
+  late final int firstPlayerId;
   late final List<Player> players;
+  final List<TurnLog> turnLogs = [];
   int turn = 0;
+  int turnNumber = 0;
   int skippedTurns = 0;
   String message = '手札からブロックを選び、盤面をタップ';
   bool finished = false;
@@ -954,12 +1390,44 @@ class MatchState {
     final piece = player.hand[handIndex];
     final positions = preview.positions;
     final rotated = rotation != 0;
+    final opponentId = 1 - player.id;
+    final opponentScoreBefore = players[opponentId].score;
+    final playerWasBehind = player.score < opponentScoreBefore;
+    final opponentMovesBefore = _countLegalPlacements(opponentId);
     final scoringEdges = _touchingEdges(player.id, positions);
     final touchingEdges = scoringEdges.length;
     for (final p in positions) board[p[0] * 11 + p[1]] = player.id;
     piece.used = true;
     player.score += touchingEdges * 100;
     if (rotated) player.energy--;
+    player.placements++;
+    player.totalPlacementPoints += touchingEdges * 100;
+    player.rotatedPlacements += rotated ? 1 : 0;
+    player.lastPlacementPoints = touchingEdges * 100;
+    player.obstructionPoints += max(
+      0,
+      opponentMovesBefore - _countLegalPlacements(opponentId),
+    );
+    turnNumber++;
+    turnLogs.add(
+      TurnLog(
+        turnNumber: turnNumber,
+        playerId: player.id,
+        playerName: player.name,
+        blockSize: piece.baseShape.length,
+        points: touchingEdges * 100,
+        totalPoints: player.score,
+        playerOneTotalPoints: players[0].score,
+        playerTwoTotalPoints: players[1].score,
+        comeback: playerWasBehind && player.score > opponentScoreBefore,
+        rotated: rotated,
+        obstruction: max(
+          0,
+          opponentMovesBefore - _countLegalPlacements(opponentId),
+        ),
+        board: List<int?>.from(board),
+      ),
+    );
     message = '${piece.baseShape.length}マス配置  +${touchingEdges * 100} pt';
     skippedTurns = 0;
     _advance();
@@ -1111,6 +1579,41 @@ class MatchState {
     if (colDelta < 0) return EdgeSide.left;
     return EdgeSide.right;
   }
+
+  int _countLegalPlacements(int playerId) {
+    final player = players[playerId];
+    var count = 0;
+    for (var handIndex = 0; handIndex < player.hand.length; handIndex++) {
+      final piece = player.hand[handIndex];
+      if (piece.used) continue;
+      for (var rotation = 0; rotation < 4; rotation++) {
+        if (rotation != 0 && player.energy == 0) continue;
+        final cells = rotate(
+          piece.baseShape,
+          (piece.initialRotation + rotation) % 4,
+        );
+        for (var row = 0; row < 11; row++) {
+          for (var col = 0; col < 11; col++) {
+            final positions = cells
+                .map((cell) => [row + cell[0], col + cell[1]])
+                .toList();
+            if (positions.any(
+              (position) =>
+                  position[0] < 0 ||
+                  position[0] >= 11 ||
+                  position[1] < 0 ||
+                  position[1] >= 11 ||
+                  board[position[0] * 11 + position[1]] != null,
+            )) {
+              continue;
+            }
+            if (_touchesOwnEdge(playerId, positions)) count++;
+          }
+        }
+      }
+    }
+    return count;
+  }
 }
 
 class Player {
@@ -1122,6 +1625,156 @@ class Player {
   final List<HandPiece> hand;
   int score = 0;
   int energy = 2;
+  int placements = 0;
+  int rotatedPlacements = 0;
+  int totalPlacementPoints = 0;
+  int lastPlacementPoints = 0;
+  int obstructionPoints = 0;
+}
+
+class PlayerStyleProfile {
+  final List<List<double>> _history = [];
+  final List<MatchRecord> _matches = [];
+  int wins = 0;
+  int losses = 0;
+  int draws = 0;
+  int _totalScore = 0;
+
+  int get gamesPlayed => _history.length;
+
+  List<MatchRecord> get matches => List.unmodifiable(_matches);
+
+  int get averageScore =>
+      gamesPlayed == 0 ? 0 : (_totalScore / gamesPlayed).round();
+
+  List<int> get ratings {
+    if (_history.isEmpty) return List.filled(5, 3);
+    return List.generate(5, (axis) {
+      final average =
+          _history.map((game) => game[axis]).reduce((a, b) => a + b) /
+          _history.length;
+      return average.round().clamp(1, 5);
+    });
+  }
+
+  void record(Player player, Player opponent, MatchState match) {
+    _totalScore += player.score;
+    if (player.score > opponent.score) {
+      wins++;
+    } else if (player.score < opponent.score) {
+      losses++;
+    } else {
+      draws++;
+    }
+    final placements = max(1, player.placements);
+    final completion =
+        player.hand.where((piece) => piece.used).length / player.hand.length;
+    _history.add([
+      _rating(1 + min(4, player.totalPlacementPoints / placements / 100)),
+      _rating(1 + player.rotatedPlacements / placements * 4),
+      _rating(1 + min(4, player.obstructionPoints / placements / 20)),
+      _rating(1 + min(4, player.lastPlacementPoints / 100)),
+      _rating(1 + completion * 4),
+    ]);
+    _matches.insert(0, MatchRecord.fromMatch(match));
+  }
+
+  double _rating(double value) => value.clamp(1, 5);
+}
+
+class MatchRecord {
+  MatchRecord({
+    required this.playerOneName,
+    required this.playerTwoName,
+    required this.winnerName,
+    required this.firstPlayerName,
+    required this.secondPlayerName,
+    required this.playerOneScore,
+    required this.playerTwoScore,
+    required this.startedAt,
+    required this.duration,
+    required this.initialBoard,
+    required this.logs,
+  });
+
+  factory MatchRecord.fromMatch(MatchState match) {
+    final playerOne = match.players[0];
+    final playerTwo = match.players[1];
+    final winnerName = playerOne.score == playerTwo.score
+        ? '引き分け'
+        : playerOne.score > playerTwo.score
+        ? playerOne.name
+        : playerTwo.name;
+    return MatchRecord(
+      playerOneName: playerOne.name,
+      playerTwoName: playerTwo.name,
+      winnerName: winnerName,
+      firstPlayerName: match.players[match.firstPlayerId].name,
+      secondPlayerName: match.players[1 - match.firstPlayerId].name,
+      playerOneScore: playerOne.score,
+      playerTwoScore: playerTwo.score,
+      startedAt: match.startedAt,
+      duration: DateTime.now().difference(match.startedAt),
+      initialBoard: List<int?>.from(match.initialBoard),
+      logs: List.unmodifiable(match.turnLogs),
+    );
+  }
+
+  final String playerOneName;
+  final String playerTwoName;
+  final String winnerName;
+  final String firstPlayerName;
+  final String secondPlayerName;
+  final int playerOneScore;
+  final int playerTwoScore;
+  final DateTime startedAt;
+  final Duration duration;
+  final List<int?> initialBoard;
+  final List<TurnLog> logs;
+
+  String get formattedStartedAt {
+    final month = startedAt.month.toString().padLeft(2, '0');
+    final day = startedAt.day.toString().padLeft(2, '0');
+    final hour = startedAt.hour.toString().padLeft(2, '0');
+    final minute = startedAt.minute.toString().padLeft(2, '0');
+    return '${startedAt.year}/$month/$day $hour:$minute';
+  }
+
+  String get formattedDuration {
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+}
+
+class TurnLog {
+  const TurnLog({
+    required this.turnNumber,
+    required this.playerId,
+    required this.playerName,
+    required this.blockSize,
+    required this.points,
+    required this.totalPoints,
+    required this.playerOneTotalPoints,
+    required this.playerTwoTotalPoints,
+    required this.comeback,
+    required this.rotated,
+    required this.obstruction,
+    required this.board,
+  });
+
+  final int turnNumber;
+  final int playerId;
+  final String playerName;
+  final int blockSize;
+  final int points;
+  final int totalPoints;
+  final int playerOneTotalPoints;
+  final int playerTwoTotalPoints;
+  final bool comeback;
+  final bool rotated;
+  final int obstruction;
+  final List<int?> board;
 }
 
 class HandPiece {
