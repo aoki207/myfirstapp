@@ -359,74 +359,54 @@ class _GameSettingsPageState extends State<GameSettingsPage> {
     return AlertDialog(
       title: const Text('ゲーム条件設定'),
       content: SizedBox(
-        width: 560,
+        width: min(560.0, MediaQuery.sizeOf(context).width - 48.0),
         child: SingleChildScrollView(
           padding: const EdgeInsets.only(top: 4),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _sectionTitle('対戦相手'),
-              Row(
-                children: [
-                  Expanded(
-                    child: _choiceCard<bool>(
-                      value: true,
-                      groupValue: _isCpu,
-                      label: 'CPU対戦',
-                      icon: Icons.smart_toy_rounded,
-                      onChanged: (value) => setState(() => _isCpu = value!),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _choiceCard<bool>(
-                      value: false,
-                      groupValue: _isCpu,
-                      label: 'プレイヤー対戦',
-                      icon: Icons.people_rounded,
-                      onChanged: (value) => setState(() => _isCpu = value!),
-                    ),
-                  ),
-                ],
-              ),
+              _choiceGroup([
+                _choiceCard<bool>(
+                  value: true,
+                  groupValue: _isCpu,
+                  label: 'CPU対戦',
+                  icon: Icons.smart_toy_rounded,
+                  onChanged: (value) => setState(() => _isCpu = value!),
+                ),
+                _choiceCard<bool>(
+                  value: false,
+                  groupValue: _isCpu,
+                  label: 'プレイヤー対戦',
+                  icon: Icons.people_rounded,
+                  onChanged: (value) => setState(() => _isCpu = value!),
+                ),
+              ]),
               const SizedBox(height: 18),
               _sectionTitle('先攻・後攻'),
-              Row(
-                children: [
-                  Expanded(
-                    child: _choiceCard<int>(
-                      value: 2,
-                      groupValue: _firstPlayer,
-                      label: 'ランダム',
-                      icon: Icons.shuffle_rounded,
-                      onChanged: (value) =>
-                          setState(() => _firstPlayer = value!),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _choiceCard<int>(
-                      value: 0,
-                      groupValue: _firstPlayer,
-                      label: 'PLAYER 1が先攻',
-                      icon: Icons.looks_one_rounded,
-                      onChanged: (value) =>
-                          setState(() => _firstPlayer = value!),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _choiceCard<int>(
-                      value: 1,
-                      groupValue: _firstPlayer,
-                      label: 'PLAYER 2 / CPUが先攻',
-                      icon: Icons.looks_two_rounded,
-                      onChanged: (value) =>
-                          setState(() => _firstPlayer = value!),
-                    ),
-                  ),
-                ],
-              ),
+              _choiceGroup([
+                _choiceCard<int>(
+                  value: 2,
+                  groupValue: _firstPlayer,
+                  label: 'ランダム',
+                  icon: Icons.shuffle_rounded,
+                  onChanged: (value) => setState(() => _firstPlayer = value!),
+                ),
+                _choiceCard<int>(
+                  value: 0,
+                  groupValue: _firstPlayer,
+                  label: 'PLAYER 1が先攻',
+                  icon: Icons.looks_one_rounded,
+                  onChanged: (value) => setState(() => _firstPlayer = value!),
+                ),
+                _choiceCard<int>(
+                  value: 1,
+                  groupValue: _firstPlayer,
+                  label: 'PLAYER 2 / CPUが先攻',
+                  icon: Icons.looks_two_rounded,
+                  onChanged: (value) => setState(() => _firstPlayer = value!),
+                ),
+              ]),
               const SizedBox(height: 18),
               IgnorePointer(
                 ignoring: !_isCpu,
@@ -436,102 +416,76 @@ class _GameSettingsPageState extends State<GameSettingsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _sectionTitle('CPUのプレイスタイル'),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _choiceCard<String>(
-                              value: 'ランダム',
-                              groupValue: _cpuStyle,
-                              label: 'ランダム',
-                              icon: Icons.shuffle_rounded,
-                              onChanged: (value) =>
-                                  setState(() => _cpuStyle = value!),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _choiceCard<String>(
-                              value: '得点志向',
-                              groupValue: _cpuStyle,
-                              label: '得点志向',
-                              icon: Icons.trending_up_rounded,
-                              onChanged: (value) =>
-                                  setState(() => _cpuStyle = value!),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _choiceCard<String>(
-                              value: '妨害志向',
-                              groupValue: _cpuStyle,
-                              label: '妨害志向',
-                              icon: Icons.block_rounded,
-                              onChanged: (value) =>
-                                  setState(() => _cpuStyle = value!),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _choiceCard<String>(
-                              value: '終盤決定力',
-                              groupValue: _cpuStyle,
-                              label: '終盤決定力',
-                              icon: Icons.flag_rounded,
-                              onChanged: (value) =>
-                                  setState(() => _cpuStyle = value!),
-                            ),
-                          ),
-                        ],
-                      ),
+                      _choiceGroup([
+                        _choiceCard<String>(
+                          value: 'ランダム',
+                          groupValue: _cpuStyle,
+                          label: 'ランダム',
+                          icon: Icons.shuffle_rounded,
+                          onChanged: (value) =>
+                              setState(() => _cpuStyle = value!),
+                        ),
+                        _choiceCard<String>(
+                          value: '得点志向',
+                          groupValue: _cpuStyle,
+                          label: '得点志向',
+                          icon: Icons.trending_up_rounded,
+                          onChanged: (value) =>
+                              setState(() => _cpuStyle = value!),
+                        ),
+                        _choiceCard<String>(
+                          value: '妨害志向',
+                          groupValue: _cpuStyle,
+                          label: '妨害志向',
+                          icon: Icons.block_rounded,
+                          onChanged: (value) =>
+                              setState(() => _cpuStyle = value!),
+                        ),
+                        _choiceCard<String>(
+                          value: '終盤決定力',
+                          groupValue: _cpuStyle,
+                          label: '終盤決定力',
+                          icon: Icons.flag_rounded,
+                          onChanged: (value) =>
+                              setState(() => _cpuStyle = value!),
+                        ),
+                      ]),
                       const SizedBox(height: 14),
                       _sectionTitle('CPUの強さ'),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _choiceCard<String>(
-                              value: 'ふつう',
-                              groupValue: _cpuStrength,
-                              label: 'ふつう',
-                              icon: Icons.sentiment_neutral_rounded,
-                              onChanged: (value) =>
-                                  setState(() => _cpuStrength = value!),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _choiceCard<String>(
-                              value: '強い',
-                              groupValue: _cpuStrength,
-                              label: '強い',
-                              icon: Icons.sentiment_satisfied_alt_rounded,
-                              onChanged: (value) =>
-                                  setState(() => _cpuStrength = value!),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _choiceCard<String>(
-                              value: 'プロ',
-                              groupValue: _cpuStrength,
-                              label: 'プロ',
-                              icon: Icons.workspace_premium_rounded,
-                              onChanged: (value) =>
-                                  setState(() => _cpuStrength = value!),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _choiceCard<String>(
-                              value: '神',
-                              groupValue: _cpuStrength,
-                              label: '神',
-                              icon: Icons.auto_awesome_rounded,
-                              onChanged: (value) =>
-                                  setState(() => _cpuStrength = value!),
-                            ),
-                          ),
-                        ],
-                      ),
+                      _choiceGroup([
+                        _choiceCard<String>(
+                          value: 'ふつう',
+                          groupValue: _cpuStrength,
+                          label: 'ふつう',
+                          icon: Icons.sentiment_neutral_rounded,
+                          onChanged: (value) =>
+                              setState(() => _cpuStrength = value!),
+                        ),
+                        _choiceCard<String>(
+                          value: '強い',
+                          groupValue: _cpuStrength,
+                          label: '強い',
+                          icon: Icons.sentiment_satisfied_alt_rounded,
+                          onChanged: (value) =>
+                              setState(() => _cpuStrength = value!),
+                        ),
+                        _choiceCard<String>(
+                          value: 'プロ',
+                          groupValue: _cpuStrength,
+                          label: 'プロ',
+                          icon: Icons.workspace_premium_rounded,
+                          onChanged: (value) =>
+                              setState(() => _cpuStrength = value!),
+                        ),
+                        _choiceCard<String>(
+                          value: '神',
+                          groupValue: _cpuStrength,
+                          label: '神',
+                          icon: Icons.auto_awesome_rounded,
+                          onChanged: (value) =>
+                              setState(() => _cpuStrength = value!),
+                        ),
+                      ]),
                     ],
                   ),
                 ),
@@ -565,6 +519,14 @@ class _GameSettingsPageState extends State<GameSettingsPage> {
           fontWeight: FontWeight.w800,
         ),
       ),
+    );
+  }
+
+  Widget _choiceGroup(List<Widget> choices) {
+    return Column(
+      children: choices
+          .map((choice) => SizedBox(width: double.infinity, child: choice))
+          .toList(),
     );
   }
 

@@ -30,6 +30,22 @@ void main() {
     expect(find.byType(GridView), findsOneWidget);
   });
 
+  testWidgets('keeps game settings readable on a phone width', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(const BlokusApp());
+    await tester.tap(find.text('対戦する'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('ゲーム条件設定'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   test('enforces first placement and awards edge points', () {
     final match = MatchState(false, Random(1));
     match.turn = 0;
