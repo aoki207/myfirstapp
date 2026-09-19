@@ -128,6 +128,54 @@ void main() {
     expect(match.board.where((cell) => cell == 1), isNotEmpty);
   });
 
+  test('stores the newest match first in the profile history', () {
+    final profile = PlayerStyleProfile();
+    final older = MatchState(false, Random(20));
+    older.players[0].score = 100;
+    profile.record(older.players[0], older.players[1], older);
+
+    final newer = MatchState(false, Random(21));
+    newer.players[0].score = 300;
+    profile.record(newer.players[0], newer.players[1], newer);
+
+    expect(profile.matches, hasLength(2));
+    expect(profile.matches.first.playerOneScore, 300);
+  });
+
+  test('stores play duration on each match record', () {
+    final match = MatchState(false, Random(23));
+    final record = MatchRecord.fromMatch(match);
+
+    expect(record.duration, isA<Duration>());
+    expect(record.formattedDuration, matches(RegExp(r'^\d+:\d{2}$')));
+    expect(
+      record.formattedStartedAt,
+      matches(RegExp(r'^\d{4}/\d{2}/\d{2} \d{2}:\d{2}$')),
+    );
+  });
+
+  testWidgets('shows the board and turn logs together', (tester) async {
+    final match = MatchState(false, Random(22));
+    match.turn = 0;
+    final placement = _findPlacement(match, 0, 0);
+    expect(placement, isNotNull);
+    match.tryPlace(0, 0, placement!.$1, placement.$2);
+
+    await tester.pumpWidget(
+      MaterialApp(home: MatchLogPage(match: MatchRecord.fromMatch(match))),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(GridView), findsOneWidget);
+    expect(find.textContaining('1ターン目'), findsOneWidget);
+    expect(find.textContaining('総得点:'), findsOneWidget);
+    expect(find.textContaining('得点:'), findsOneWidget);
+    expect(find.textContaining('逆転:'), findsOneWidget);
+    expect(find.textContaining('妨害度:'), findsOneWidget);
+    expect(find.textContaining('回転:'), findsOneWidget);
+    expect(find.textContaining('6マスブロック'), findsNothing);
+  });
+
   testWidgets('shows the written rules', (tester) async {
     await tester.pumpWidget(const BlokusApp());
     await tester.tap(find.text('ルールを見る'));
@@ -136,6 +184,25 @@ void main() {
     expect(find.text('📖 ゲームの遊び方'), findsOneWidget);
     expect(find.text('1. ターンの流れ'), findsOneWidget);
     expect(find.textContaining('盤面にブロックをつなげて'), findsOneWidget);
+  });
+
+  testWidgets('opens the player profile', (tester) async {
+    await tester.pumpWidget(const BlokusApp());
+    await tester.tap(find.text('マイページ'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('マイページ'), findsOneWidget);
+    expect(find.text('PLAYER 1のプレイスタイル'), findsOneWidget);
+    expect(find.byType(CustomPaint), findsAtLeastNWidgets(1));
+    expect(find.text('試合数'), findsOneWidget);
+    expect(find.text('勝敗'), findsOneWidget);
+    expect(find.text('平均ポイント'), findsOneWidget);
+    expect(find.text('プレイ履歴を見る'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('プレイ履歴を見る'));
+    await tester.tap(find.text('プレイ履歴を見る'));
+    await tester.pumpAndSettle();
+    expect(find.text('プレイ履歴'), findsOneWidget);
   });
 }
 
