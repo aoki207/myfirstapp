@@ -6,7 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_application_1/main.dart';
 
 void main() {
-  testWidgets('opens PvP from the main menu', (tester) async {
+  testWidgets('opens the game settings and starts a player match', (
+    tester,
+  ) async {
     await tester.pumpWidget(const BlokusApp());
 
     expect(find.text('対戦する'), findsOneWidget);
@@ -14,9 +16,15 @@ void main() {
 
     await tester.tap(find.text('対戦する'));
     await tester.pumpAndSettle();
-    expect(find.text('対戦モードを選択'), findsOneWidget);
+    expect(find.text('ゲーム条件設定'), findsOneWidget);
+    expect(find.text('CPU対戦'), findsOneWidget);
+    expect(find.text('プレイヤー対戦'), findsOneWidget);
+    expect(find.text('ランダム'), findsAtLeastNWidgets(1));
+    expect(find.text('CPUのプレイスタイル'), findsOneWidget);
+    expect(find.text('CPUの強さ'), findsOneWidget);
 
-    await tester.tap(find.text('PvP'));
+    await tester.tap(find.text('プレイヤー対戦'));
+    await tester.tap(find.text('対戦開始'));
     await tester.pumpAndSettle();
     expect(find.text('対戦中'), findsOneWidget);
     expect(find.byType(GridView), findsOneWidget);

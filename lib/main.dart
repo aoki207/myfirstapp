@@ -238,7 +238,7 @@ class MainMenuPage extends StatelessWidget {
                     context,
                     '対戦する',
                     Icons.sports_esports_rounded,
-                    () => _showModeDialog(context),
+                    () => _openGameSettings(context),
                   ),
                   const SizedBox(height: 14),
                   _menuButton(
@@ -317,30 +317,11 @@ class MainMenuPage extends StatelessWidget {
     );
   }
 
-  void _showModeDialog(BuildContext context) {
-    showDialog<bool>(
+  void _openGameSettings(BuildContext context) {
+    showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('対戦モードを選択'),
-        content: const Text('2人で対戦するか、CPUと対戦するか選んでください。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('PvP'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('PvE'),
-          ),
-        ],
-      ),
-    ).then((isCpu) {
-      if (!context.mounted || isCpu == null) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => MatchPage(isCpu: isCpu)),
-      );
-    });
+      builder: (_) => const GameSettingsPage(),
+    );
   }
 
   void _showRules(BuildContext context) {
@@ -355,6 +336,280 @@ class MainMenuPage extends StatelessWidget {
             child: const Text('閉じる'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class GameSettingsPage extends StatefulWidget {
+  const GameSettingsPage({super.key});
+
+  @override
+  State<GameSettingsPage> createState() => _GameSettingsPageState();
+}
+
+class _GameSettingsPageState extends State<GameSettingsPage> {
+  bool _isCpu = true;
+  int _firstPlayer = 2;
+  String _cpuStyle = 'ランダム';
+  String _cpuStrength = 'ふつう';
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('ゲーム条件設定'),
+      content: SizedBox(
+        width: 560,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.only(top: 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _sectionTitle('対戦相手'),
+              Row(
+                children: [
+                  Expanded(
+                    child: _choiceCard<bool>(
+                      value: true,
+                      groupValue: _isCpu,
+                      label: 'CPU対戦',
+                      icon: Icons.smart_toy_rounded,
+                      onChanged: (value) => setState(() => _isCpu = value!),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _choiceCard<bool>(
+                      value: false,
+                      groupValue: _isCpu,
+                      label: 'プレイヤー対戦',
+                      icon: Icons.people_rounded,
+                      onChanged: (value) => setState(() => _isCpu = value!),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              _sectionTitle('先攻・後攻'),
+              Row(
+                children: [
+                  Expanded(
+                    child: _choiceCard<int>(
+                      value: 2,
+                      groupValue: _firstPlayer,
+                      label: 'ランダム',
+                      icon: Icons.shuffle_rounded,
+                      onChanged: (value) =>
+                          setState(() => _firstPlayer = value!),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _choiceCard<int>(
+                      value: 0,
+                      groupValue: _firstPlayer,
+                      label: 'PLAYER 1が先攻',
+                      icon: Icons.looks_one_rounded,
+                      onChanged: (value) =>
+                          setState(() => _firstPlayer = value!),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _choiceCard<int>(
+                      value: 1,
+                      groupValue: _firstPlayer,
+                      label: 'PLAYER 2 / CPUが先攻',
+                      icon: Icons.looks_two_rounded,
+                      onChanged: (value) =>
+                          setState(() => _firstPlayer = value!),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              IgnorePointer(
+                ignoring: !_isCpu,
+                child: Opacity(
+                  opacity: _isCpu ? 1 : 0.42,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _sectionTitle('CPUのプレイスタイル'),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _choiceCard<String>(
+                              value: 'ランダム',
+                              groupValue: _cpuStyle,
+                              label: 'ランダム',
+                              icon: Icons.shuffle_rounded,
+                              onChanged: (value) =>
+                                  setState(() => _cpuStyle = value!),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _choiceCard<String>(
+                              value: '得点志向',
+                              groupValue: _cpuStyle,
+                              label: '得点志向',
+                              icon: Icons.trending_up_rounded,
+                              onChanged: (value) =>
+                                  setState(() => _cpuStyle = value!),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _choiceCard<String>(
+                              value: '妨害志向',
+                              groupValue: _cpuStyle,
+                              label: '妨害志向',
+                              icon: Icons.block_rounded,
+                              onChanged: (value) =>
+                                  setState(() => _cpuStyle = value!),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _choiceCard<String>(
+                              value: '終盤決定力',
+                              groupValue: _cpuStyle,
+                              label: '終盤決定力',
+                              icon: Icons.flag_rounded,
+                              onChanged: (value) =>
+                                  setState(() => _cpuStyle = value!),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      _sectionTitle('CPUの強さ'),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _choiceCard<String>(
+                              value: 'ふつう',
+                              groupValue: _cpuStrength,
+                              label: 'ふつう',
+                              icon: Icons.sentiment_neutral_rounded,
+                              onChanged: (value) =>
+                                  setState(() => _cpuStrength = value!),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _choiceCard<String>(
+                              value: '強い',
+                              groupValue: _cpuStrength,
+                              label: '強い',
+                              icon: Icons.sentiment_satisfied_alt_rounded,
+                              onChanged: (value) =>
+                                  setState(() => _cpuStrength = value!),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _choiceCard<String>(
+                              value: 'プロ',
+                              groupValue: _cpuStrength,
+                              label: 'プロ',
+                              icon: Icons.workspace_premium_rounded,
+                              onChanged: (value) =>
+                                  setState(() => _cpuStrength = value!),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _choiceCard<String>(
+                              value: '神',
+                              groupValue: _cpuStrength,
+                              label: '神',
+                              icon: Icons.auto_awesome_rounded,
+                              onChanged: (value) =>
+                                  setState(() => _cpuStrength = value!),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('キャンセル'),
+        ),
+        FilledButton.icon(
+          onPressed: _startMatch,
+          icon: const Icon(Icons.play_arrow_rounded),
+          label: const Text('対戦開始'),
+        ),
+      ],
+    );
+  }
+
+  Widget _sectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 7),
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: _gold,
+          fontSize: 15,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+
+  Widget _choiceCard<T>({
+    required T value,
+    required T groupValue,
+    required String label,
+    required IconData icon,
+    required ValueChanged<T?> onChanged,
+  }) {
+    final selected = value == groupValue;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 7),
+      child: Material(
+        color: selected ? _gold.withAlpha(28) : _panel,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(color: selected ? _gold : const Color(0xff2e3d56)),
+        ),
+        child: RadioListTile<T>(
+          value: value,
+          groupValue: groupValue,
+          onChanged: onChanged,
+          secondary: Icon(
+            icon,
+            color: selected ? _gold : const Color(0xff8290a8),
+          ),
+          title: Text(label),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+        ),
+      ),
+    );
+  }
+
+  void _startMatch() {
+    final navigator = Navigator.of(context);
+    navigator.pop();
+    navigator.push(
+      MaterialPageRoute(
+        builder: (_) => MatchPage(
+          isCpu: _isCpu,
+          firstPlayerId: _firstPlayer == 2 ? null : _firstPlayer,
+          cpuStyle: _cpuStyle,
+          cpuStrength: _cpuStrength,
+        ),
       ),
     );
   }
@@ -481,7 +736,8 @@ class HistoryPage extends StatelessWidget {
                     'プレイ開始: ${match.formattedStartedAt}\n'
                     '勝者: ${match.winnerName}  ・  先攻: ${match.firstPlayerName}  ・  後攻: ${match.secondPlayerName}\n'
                     '${match.playerOneScore} pt  -  ${match.playerTwoScore} pt  ・  '
-                    'プレイ時間: ${match.formattedDuration}',
+                    'プレイ時間: ${match.formattedDuration}\n'
+                    'CPUプレイスタイル: ${match.cpuStyle}',
                   ),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => Navigator.push(
@@ -525,6 +781,20 @@ class _MatchLogPageState extends State<MatchLogPage> {
       body: SafeArea(
         child: Column(
           children: [
+            if (widget.match.cpuStyle != 'なし')
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'CPUプレイスタイル: ${widget.match.cpuStyle}',
+                    style: const TextStyle(
+                      color: _gold,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
             Flexible(
               flex: 3,
               child: Padding(
@@ -772,9 +1042,18 @@ class _RadarPainter extends CustomPainter {
 }
 
 class MatchPage extends StatefulWidget {
-  const MatchPage({super.key, required this.isCpu});
+  const MatchPage({
+    super.key,
+    required this.isCpu,
+    this.firstPlayerId,
+    this.cpuStyle = 'ランダム',
+    this.cpuStrength = 'ふつう',
+  });
 
   final bool isCpu;
+  final int? firstPlayerId;
+  final String cpuStyle;
+  final String cpuStrength;
 
   @override
   State<MatchPage> createState() => _MatchPageState();
@@ -803,7 +1082,13 @@ class _MatchPageState extends State<MatchPage>
       upperBound: 1,
       value: 1,
     );
-    _match = MatchState(widget.isCpu, Random());
+    _match = MatchState(
+      widget.isCpu,
+      Random(),
+      firstPlayerId: widget.firstPlayerId,
+      cpuStyle: widget.cpuStyle,
+      cpuStrength: widget.cpuStrength,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _nextTurn();
     });
@@ -987,10 +1272,14 @@ class _MatchPageState extends State<MatchPage>
       return;
     }
     if (widget.isCpu && _match.turn == 1) {
-      setState(() => _busy = true);
-      Future<void>.delayed(const Duration(milliseconds: 450), () {
+      setState(() {
+        _busy = true;
+        _match.message = 'CPU試行中';
+      });
+      Future<void>.delayed(const Duration(milliseconds: 450), () async {
         if (!mounted) return;
-        final result = _match.cpuMove();
+        final result = await _match.cpuMoveAsync();
+        if (!mounted) return;
         if (result != null) _startPointEffect(result);
         setState(() => _busy = false);
         if (_match.finished) {
@@ -1008,16 +1297,17 @@ class _MatchPageState extends State<MatchPage>
       showDialog<void>(
         context: context,
         barrierDismissible: false,
-        builder: (context) => AlertDialog(
+        builder: (dialogContext) => AlertDialog(
           title: Text(_match.resultTitle),
           content: Text(
-            '${_match.players[0].name}: ${_match.players[0].score} pt\n${_match.players[1].name}: ${_match.players[1].score} pt',
+            '${_match.players[0].name}: ${_match.players[0].score} pt\n'
+            '${_match.players[1].name}: ${_match.players[1].score} pt',
           ),
           actions: [
             FilledButton(
               onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
+                Navigator.of(context).popUntil((route) => route.isFirst);
               },
               child: const Text('メイン画面へ'),
             ),
@@ -1031,7 +1321,10 @@ class _MatchPageState extends State<MatchPage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('対戦中', style: TextStyle(fontWeight: FontWeight.w800)),
+        title: Text(
+          widget.isCpu ? '対戦中  ${_match.cpuStyle}' : '対戦中',
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
           icon: const Icon(Icons.arrow_back_rounded),
@@ -1215,17 +1508,18 @@ class _MatchPageState extends State<MatchPage>
 
   Widget _turnBanner() => Row(
     children: [
-      Icon(
-        _busy ? Icons.hourglass_top_rounded : Icons.touch_app_rounded,
-        color: _currentPlayer.color,
-        size: 18,
-      ),
+      if (_busy)
+        const SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        )
+      else
+        Icon(Icons.touch_app_rounded, color: _currentPlayer.color, size: 18),
       const SizedBox(width: 7),
       Expanded(
         child: Text(
-          _busy
-              ? 'CPUが考えています...'
-              : '${_currentPlayer.name}のターン - ${_match.message}',
+          _busy ? 'CPU試行中' : '${_currentPlayer.name}のターン - ${_match.message}',
           style: const TextStyle(color: Color(0xffc7d0df), fontSize: 12),
         ),
       ),
@@ -1350,20 +1644,31 @@ class _MatchPageState extends State<MatchPage>
 }
 
 class MatchState {
-  MatchState(this.isCpu, this.random) {
+  MatchState(
+    this.isCpu,
+    this.random, {
+    int? firstPlayerId,
+    String cpuStyle = 'なし',
+    this.cpuStrength = 'ふつう',
+  }) {
+    this.cpuStyle = cpuStyle == 'ランダム' && isCpu
+        ? const ['得点志向', '妨害志向', '終盤決定力'][random.nextInt(3)]
+        : cpuStyle;
     players = [
       Player(0, 'PLAYER 1', _blue, _createHand(random)),
       Player(1, isCpu ? 'CPU' : 'PLAYER 2', _red, _createHand(random)),
     ];
     board[10 * 11 + 5] = 0;
     board[5] = 1;
-    firstPlayerId = random.nextInt(2);
-    turn = firstPlayerId;
+    this.firstPlayerId = firstPlayerId ?? random.nextInt(2);
+    turn = this.firstPlayerId;
     initialBoard = List<int?>.from(board);
   }
 
   final bool isCpu;
   final Random random;
+  late final String cpuStyle;
+  final String cpuStrength;
   final DateTime startedAt = DateTime.now();
   final List<int?> board = List<int?>.filled(121, null);
   late final List<int?> initialBoard;
@@ -1499,20 +1804,152 @@ class MatchState {
   }
 
   PlacementResult? cpuMove() {
+    final candidates = _cpuCandidates(const Duration(seconds: 5));
+    if (candidates.isNotEmpty) {
+      final selected = _selectCpuCandidate(candidates);
+      return tryPlace(
+        selected.handIndex,
+        selected.rotation,
+        selected.row,
+        selected.col,
+      );
+    }
+    skipTurn();
+    return null;
+  }
+
+  Future<PlacementResult?> cpuMoveAsync() async {
+    final stopwatch = Stopwatch()..start();
+    final candidates = <CpuCandidate>[];
     final player = players[1];
     for (var handIndex = 0; handIndex < player.hand.length; handIndex++) {
       if (player.hand[handIndex].used) continue;
       for (var rotation = 0; rotation < 4; rotation++) {
         for (var row = 0; row < 11; row++) {
           for (var col = 0; col < 11; col++) {
-            final result = tryPlace(handIndex, rotation, row, col);
-            if (result.success) return result;
+            final candidate = _makeCpuCandidate(handIndex, rotation, row, col);
+            if (candidate != null) candidates.add(candidate);
+            if (candidates.length % 80 == 0) {
+              await Future<void>.delayed(Duration.zero);
+            }
+            if (stopwatch.elapsed >= const Duration(seconds: 5)) {
+              break;
+            }
+          }
+          if (stopwatch.elapsed >= const Duration(seconds: 5)) break;
+        }
+        if (stopwatch.elapsed >= const Duration(seconds: 5)) break;
+      }
+      if (stopwatch.elapsed >= const Duration(seconds: 5)) break;
+    }
+    if (candidates.isEmpty) {
+      skipTurn();
+      return null;
+    }
+    final selected = _selectCpuCandidate(candidates);
+    return tryPlace(
+      selected.handIndex,
+      selected.rotation,
+      selected.row,
+      selected.col,
+    );
+  }
+
+  List<CpuCandidate> _cpuCandidates(Duration limit) {
+    final stopwatch = Stopwatch()..start();
+    final candidates = <CpuCandidate>[];
+    final player = players[1];
+    for (var handIndex = 0; handIndex < player.hand.length; handIndex++) {
+      if (player.hand[handIndex].used) continue;
+      for (var rotation = 0; rotation < 4; rotation++) {
+        for (var row = 0; row < 11; row++) {
+          for (var col = 0; col < 11; col++) {
+            final candidate = _makeCpuCandidate(handIndex, rotation, row, col);
+            if (candidate != null) candidates.add(candidate);
+            if (stopwatch.elapsed >= limit) return candidates;
           }
         }
       }
     }
-    skipTurn();
-    return null;
+    return candidates;
+  }
+
+  CpuCandidate? _makeCpuCandidate(
+    int handIndex,
+    int rotation,
+    int row,
+    int col,
+  ) {
+    final preview = previewPlacement(handIndex, rotation, row, col);
+    if (!preview.success) return null;
+    final player = players[1];
+    final points = _touchingEdges(1, preview.positions).length * 100;
+    final opponentMovesBefore = _countLegalPlacements(0);
+    final piece = player.hand[handIndex];
+    for (final position in preview.positions) {
+      board[position[0] * 11 + position[1]] = 1;
+    }
+    piece.used = true;
+    if (rotation != 0) player.energy--;
+    final obstruction = max(0, opponentMovesBefore - _countLegalPlacements(0));
+    final futureOptions = _countLegalPlacements(1);
+    for (final position in preview.positions) {
+      board[position[0] * 11 + position[1]] = null;
+    }
+    piece.used = false;
+    if (rotation != 0) player.energy++;
+    return CpuCandidate(
+      handIndex: handIndex,
+      rotation: rotation,
+      row: row,
+      col: col,
+      points: points,
+      obstruction: obstruction,
+      blockSize: piece.baseShape.length,
+      futureOptions: futureOptions,
+    );
+  }
+
+  CpuCandidate _selectCpuCandidate(List<CpuCandidate> candidates) {
+    final scored =
+        candidates
+            .map((candidate) => (candidate, _cpuScore(candidate)))
+            .toList()
+          ..sort((a, b) => b.$2.compareTo(a.$2));
+    if (cpuStrength == 'ふつう') {
+      final topCount = min(4, scored.length);
+      return scored[random.nextInt(topCount)].$1;
+    }
+    final depth = cpuStrength == '神'
+        ? 3
+        : cpuStrength == 'プロ'
+        ? 2
+        : 1;
+    return scored
+        .take(min(scored.length, depth * 20))
+        .reduce((best, item) => item.$2 > best.$2 ? item : best)
+        .$1;
+  }
+
+  int _cpuScore(CpuCandidate candidate) {
+    final lookaheadDepth = cpuStrength == '神'
+        ? 3
+        : cpuStrength == 'プロ'
+        ? 2
+        : 1;
+    final lookahead = candidate.futureOptions * lookaheadDepth;
+    switch (cpuStyle) {
+      case '妨害志向':
+        return candidate.obstruction * 1000 + candidate.points + lookahead;
+      case '終盤決定力':
+        final remaining = players[1].hand.where((piece) => !piece.used).length;
+        return candidate.points * (remaining <= 2 ? 12 : 2) +
+            candidate.blockSize +
+            lookahead;
+      case '得点志向':
+      default:
+        return candidate.points * 100 + candidate.obstruction + lookahead;
+    }
   }
 
   void _advance() {
@@ -1691,6 +2128,7 @@ class MatchRecord {
     required this.secondPlayerName,
     required this.playerOneScore,
     required this.playerTwoScore,
+    required this.cpuStyle,
     required this.startedAt,
     required this.duration,
     required this.initialBoard,
@@ -1713,6 +2151,7 @@ class MatchRecord {
       secondPlayerName: match.players[1 - match.firstPlayerId].name,
       playerOneScore: playerOne.score,
       playerTwoScore: playerTwo.score,
+      cpuStyle: match.cpuStyle,
       startedAt: match.startedAt,
       duration: DateTime.now().difference(match.startedAt),
       initialBoard: List<int?>.from(match.initialBoard),
@@ -1727,6 +2166,7 @@ class MatchRecord {
   final String secondPlayerName;
   final int playerOneScore;
   final int playerTwoScore;
+  final String cpuStyle;
   final DateTime startedAt;
   final Duration duration;
   final List<int?> initialBoard;
@@ -1816,6 +2256,28 @@ class PlacementResult {
   final bool outOfBounds;
   final List<ScoringEdge> scoringEdges;
   final int points;
+}
+
+class CpuCandidate {
+  const CpuCandidate({
+    required this.handIndex,
+    required this.rotation,
+    required this.row,
+    required this.col,
+    required this.points,
+    required this.obstruction,
+    required this.blockSize,
+    required this.futureOptions,
+  });
+
+  final int handIndex;
+  final int rotation;
+  final int row;
+  final int col;
+  final int points;
+  final int obstruction;
+  final int blockSize;
+  final int futureOptions;
 }
 
 List<List<int>> rotate(List<List<int>> source, int turns) {
