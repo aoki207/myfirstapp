@@ -1197,6 +1197,9 @@ class _MatchPageState extends State<MatchPage>
     );
   }
 
+  bool _isPreviewAnchorCell(int row, int col) =>
+      _previewRow == row && _previewCol == col;
+
   bool _isOverlappingPreviewCell(int row, int col) {
     if (_previewRow == null || _previewCol == null) return false;
     final origin = _placementOrigin(_previewRow!, _previewCol!);
@@ -1534,7 +1537,9 @@ class _MatchPageState extends State<MatchPage>
                     ? (_isOutOfBoundsPreview() ||
                               _isOverlappingPreviewCell(row, col)
                           ? const Color(0xffff8a3d)
-                          : _currentPlayer.color.withAlpha(125))
+                          : (_isPreviewAnchorCell(row, col)
+                              ? _currentPlayer.color.withAlpha(180)
+                                : _currentPlayer.color.withAlpha(125)))
                     : (cell == null ? _navy : _match.players[cell].color),
                 border: effectBorder,
                 borderRadius: BorderRadius.circular(3),
@@ -1551,7 +1556,9 @@ class _MatchPageState extends State<MatchPage>
                                 _isOutOfBoundsPreview() ||
                                     _isOverlappingPreviewCell(row, col)
                                 ? const Color(0xffffeadb)
-                                : const Color(0x80ffffff),
+                              : (_isPreviewAnchorCell(row, col)
+                                  ? Colors.white
+                                  : const Color(0x80ffffff)),
                           )
                         : (cell == null
                               ? null
